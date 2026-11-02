@@ -1,0 +1,109 @@
+
+services:
+  namenode:
+    image: ghcr.io/apache/hadoop:3.5.0
+    container_name: walmart-namenode
+    hostname: namenode
+    command: ["hdfs", "namenode"]
+    ports:
+      - "9870:9870"
+      - "8020:8020"
+    volumes:
+      - namenode_data:/tmp/hadoop-root/dfs/name
+      - ./dataset:/data:ro
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+      - ./hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml:ro
+    networks:
+      - walmart-net
+
+  datanode:
+    image: ghcr.io/apache/hadoop:3.5.0
+    container_name: walmart-datanode
+    hostname: datanode
+    command: ["hdfs", "datanode"]
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    volumes:
+      - datanode_data:/tmp/hadoop-root/dfs/data
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+    networks:
+      - walmart-net
+
+  resourcemanager:
+    image: ghcr.io/apache/hadoop:3.5.0
+    container_name: walmart-resourcemanager
+    hostname: resourcemanager
+    command: ["yarn", "resourcemanager"]
+    ports:
+      - "8088:8088"
+      - "8032:8032"
+    volumes:
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+      - ./hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml:ro
+    depends_on:
+      - namenode
+    networks:
+      - walmart-net
+
+  nodemanager:
+    image: ghcr.io/apache/hadoop:3.5.0
+    container_name: walmart-nodemanager
+    hostname: nodemanager
+    command: ["yarn", "nodemanager"]
+    volumes:
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+      - ./hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml:ro
+    depends_on:
+      - resourcemanager
+      - datanode
+    networks:
+      - walmart-net
+
+  spark:
+    image: apache/spark:latest
+    container_name: walmart-spark
+    hostname: spark
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sleep infinity"]
+    depends_on:
+      - namenode
+      - datanode
+    volumes:
+      - ./spark:/workspace
+    networks:
+      - walmart-net
+
+  hive:
+    image: apache/hive:4.2.1
+    container_name: walmart-hive
+    hostname: hive
+    depends_on:
+      - namenode
+      - datanode
+    environment:
+      SERVICE_NAME: hiveserver2
+      HIVE_CUSTOM_CONF_DIR: /hive_custom_conf
+      HADOOP_CONF_DIR: /hive_custom_conf
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    volumes:
+      - ./hadoop:/hive_custom_conf:ro
+      - hive_warehouse:/opt/hive/data/warehouse
+    networks:
+      - walmart-net
+
+volumes:
+  namenode_data:
+  datanode_data:
+  hive_warehouse:
+
+networks:
+  walmart-net:
+    driver: bridge

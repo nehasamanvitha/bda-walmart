@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Environments
+venv/
+.venv/
+env/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+
+# Hadoop and Spark temporary output
+spark/spark-warehouse/
+spark/metastore_db/
